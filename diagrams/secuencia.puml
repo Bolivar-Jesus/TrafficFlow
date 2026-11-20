@@ -1,0 +1,89 @@
+@startuml secuencia
+!theme plain
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+skinparam roundCorner 8
+
+title Diagrama de Secuencia — Proceso de Solicitud y Cálculo de Ruta
+
+actor Usuario
+participant "Interfaz Gráfica\n(Streamlit App)" as UI
+participant "Gestor de Tráfico\n(TrafficManager)" as TM
+participant "Observador\n(RouteStateObserver)" as OBS
+participant "Planificador\n(RoutePlanner)" as Planner
+participant "Estrategia Activa\n(RouteStrategy)" as Strategy
+participant "Red Vial\n(CityGraph)" as Graph
+
+== Configuración Opcional de Tráfico ==
+
+Usuario -> UI : Modificar vía (Congestión / Cierre)
+activate UI
+UI -> TM : apply_congestion(u, v, factor) / close_road(u, v)
+activate TM
+TM -> Graph : set_edge_congestion() / set_edge_closed()
+activate Graph
+Graph --> TM : confirmación
+deactivate Graph
+
+TM -> TM : notify(TrafficEvent)
+TM -> OBS : on_traffic_changed(event)
+activate OBS
+OBS -> OBS : invalidar ruta previa y registrar evento
+OBS --> TM : void
+deactivate OBS
+TM --> UI : estado actualizado
+deactivate TM
+UI --> Usuario : mapa visualmente actualizado
+deactivate UI
+
+== Solicitud y Cálculo de Ruta ==
+
+Usuario -> UI : Selecciona Origen, Destino y Algoritmo
+Usuario -> UI : Clic en "Calcular Ruta"
+activate UI
+
+UI -> Planner : set_strategy(DijkstraStrategy / AStarStrategy)
+UI -> Planner : calculate_route(city_graph, origin, destination)
+activate Planner
+
+Planner -> Strategy : find_route(graph, origin, destination)
+activate Strategy
+
+Strategy -> Graph : get_node(origin), get_node(destination)
+activate Graph
+Graph --> Strategy : datos de nodos y coordenadas
+deactivate Graph
+
+loop Mientras existan nodos por explorar en la cola de prioridad
+    Strategy -> Graph : get_neighbors(current_node)
+    activate Graph
+    Graph --> Strategy : lista de nodos adyacentes
+    deactivate Graph
+
+    Strategy -> Graph : get_edge(current, neighbor)
+    activate Graph
+    Graph --> Strategy : CityEdge (distancia, costo_viaje, is_closed)
+    deactivate Graph
+
+    opt Si algoritmo es A*
+        Strategy -> Graph : heuristic(neighbor, destination)
+        activate Graph
+        Graph --> Strategy : valor h(n) en minutos
+        deactivate Graph
+    end
+end
+
+Strategy -> Strategy : Reconstruir camino óptimo
+Strategy -> Strategy : Calcular distancia total y tiempo de viaje
+Strategy --> Planner : RouteResult (camino, distancia, tiempo, ms, nodos)
+deactivate Strategy
+
+Planner --> UI : RouteResult
+deactivate Planner
+
+UI -> UI : render_city_map(graph, active_path)
+UI --> Usuario : Muestra mapa con ruta resaltada y panel de métricas
+deactivate UI
+
+@enduml

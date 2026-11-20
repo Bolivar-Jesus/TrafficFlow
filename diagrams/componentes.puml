@@ -1,0 +1,64 @@
+@startuml componentes
+!theme plain
+skinparam componentStyle uml2
+skinparam handwritten false
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam roundCorner 8
+
+title Diagrama de Componentes — TrafficFlow (Simulador de Rutas Urbanas)
+
+package "Capa de Presentación" {
+    [Interfaz Gráfica (Streamlit)] as UI
+}
+
+package "Capa de Lógica y Dominio" {
+    package "Gestión de Red Vial" {
+        [Modelo de Grafo (CityGraph)] as GraphComp
+    }
+
+    package "Motor de Navegación" {
+        [Planificador de Rutas (RoutePlanner)] as PlannerComp
+        [Estrategias de Búsqueda (RouteStrategy)] as StrategyComp
+    }
+
+    package "Gestión de Tráfico" {
+        [Gestor de Tráfico (TrafficManager)] as TrafficComp
+    }
+
+    package "Evaluación de Desempeño" {
+        [Motor de Métricas (MetricsEngine)] as MetricsComp
+    }
+}
+
+package "Infraestructura Externa" {
+    [Biblioteca NetworkX] as NetworkX
+    [Biblioteca Matplotlib] as Matplotlib
+}
+
+' Relaciones entre componentes
+UI --> PlannerComp : Solicita cálculo de rutas
+UI --> TrafficComp : Envía eventos de congestión y cierres
+UI --> MetricsComp : Solicita comparativas y benchmarks
+UI --> Matplotlib : Renderiza visualización del mapa
+
+TrafficComp --> GraphComp : Actualiza factores y cierres
+TrafficComp ..> PlannerComp : Notifica cambios viales (Observer)
+
+PlannerComp --> StrategyComp : Delega búsqueda (Strategy)
+StrategyComp --> GraphComp : Consulta topología y costos
+MetricsComp --> StrategyComp : Evalúa algoritmos en paralelo
+
+GraphComp --> NetworkX : Estructura topológica subyacente
+
+note right of StrategyComp
+  Encapsula DijkstraStrategy
+  y AStarStrategy
+end note
+
+note bottom of TrafficComp
+  Implementa Sujeto Observable
+  para control reactivo de vías
+end note
+
+@enduml

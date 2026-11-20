@@ -1,0 +1,74 @@
+@startuml actividades
+!theme plain
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam roundCorner 8
+
+title Diagrama de Actividades — Flujo de Navegación y Evaluación de Rutas
+
+start
+
+:El usuario inicia la aplicación;
+:El sistema carga el mapa urbano predeterminado;
+
+repeat
+    :Seleccionar nodo de Origen y nodo de Destino;
+    :Elegir algoritmo de búsqueda (Dijkstra o A*);
+
+    if (¿Desea alterar condiciones de tráfico?) then (sí)
+        :Seleccionar vía específica;
+        if (¿Tipo de alteración?) then (Congestión)
+            :Ajustar factor de congestión (> 1.0);
+            :Aplicar congestión a la vía;
+        else (Cierre)
+            :Cerrar temporalmente la vía;
+        endif
+        :TrafficManager notifica a observadores registrados;
+        :El mapa actualiza estados visuales de las vías;
+    else (no)
+    endif
+
+    if (¿Acción solicitada?) then (Calcular Ruta Individual)
+        :Inyectar estrategia seleccionada en RoutePlanner;
+        :Iniciar temporizador de alta precisión;
+        :Ejecutar búsqueda sobre el grafo;
+        :Detener temporizador y registrar tiempo de cómputo (ms);
+        :Registrar cantidad de nodos explorados;
+
+        if (¿Se encontró camino disponible?) then (sí)
+            :Calcular distancia física acumulada (km);
+            :Calcular tiempo de viaje estimado (min);
+            :Generar RouteResult exitoso;
+            :Renderizar mapa con ruta resaltada en color verde;
+            :Desplegar métricas en tarjetas informativas;
+        else (no)
+            :Generar RouteResult con estado fallido;
+            :Renderizar mapa sin ruta activa;
+            :Mostrar mensaje de advertencia indicando vía bloqueada o sin conexión;
+        endif
+
+    else (Comparar Algoritmos)
+        :Ejecutar DijkstraStrategy bajo las condiciones actuales;
+        :Registrar métricas reales de Dijkstra (ms, nodos, tiempo, distancia);
+        :Ejecutar AStarStrategy bajo idénticas condiciones;
+        :Registrar métricas reales de A* (ms, nodos, tiempo, distancia);
+        :Renderizar mapa con la ruta óptima encontrada;
+        :Desplegar tabla y tarjetas comparativas lado a lado;
+        :Presentar análisis comparativo de nodos explorados y tiempo;
+    endif
+
+    if (¿Restablecer mapa a condiciones iniciales?) then (sí)
+        :Ejecutar reset_all() en TrafficManager;
+        :Restaurar congestión a 1.0 y abrir vías cerradas;
+        :Notificar a los observadores;
+        :Limpiar rutas previas y actualizar mapa;
+    else (no)
+    endif
+
+backward:Continuar explorando escenarios;
+repeat while (¿El usuario desea realizar otra consulta?) is (sí)
+->no;
+
+stop
+
+@enduml

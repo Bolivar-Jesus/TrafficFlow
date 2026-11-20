@@ -1,0 +1,147 @@
+@startuml clases
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam roundCorner 8
+
+title Diagrama de Clases — TrafficFlow (Patrones Strategy y Observer)
+
+package "Módulo graph" {
+    class CityNode {
+        +id: str
+        +name: str
+        +x: float
+        +y: float
+    }
+
+    class CityEdge {
+        +u: str
+        +v: str
+        +distance: float
+        +base_speed: float
+        +congestion_factor: float
+        +is_closed: bool
+        +free_flow_time(): float
+        +travel_time(): float
+    }
+
+    class CityGraph {
+        +name: str
+        +graph: nx.Graph
+        -_max_speed: float
+        +add_node(id, name, x, y): void
+        +add_edge(u, v, distance, base_speed, congestion_factor, is_closed): void
+        +get_node(id): CityNode
+        +get_nodes(): Dict[str, CityNode]
+        +get_edge(u, v): CityEdge
+        +get_edges(): List[CityEdge]
+        +get_neighbors(id): List[str]
+        +get_traversal_cost(u, v): Optional[float]
+        +set_edge_congestion(u, v, factor): bool
+        +set_edge_closed(u, v, closed): bool
+        +reset_traffic_conditions(): void
+        +euclidean_distance(a, b): float
+        +heuristic(node, goal): float
+    }
+
+    CityGraph "1" *-- "*" CityNode : contiene
+    CityGraph "1" *-- "*" CityEdge : contiene
+}
+
+package "Módulo algorithms (Patrón Strategy)" {
+    class RouteResult {
+        +algorithm: str
+        +success: bool
+        +path: List[str]
+        +total_distance: float
+        +total_time: float
+        +nodes_explored: int
+        +execution_time_ms: float
+        +message: str
+    }
+
+    abstract class RouteStrategy {
+        +{abstract} name(): str
+        +{abstract} find_route(graph, origin, destination): RouteResult
+        #_compute_path_metrics(graph, path): Tuple[float, float]
+    }
+
+    class DijkstraStrategy {
+        +name(): str
+        +find_route(graph, origin, destination): RouteResult
+    }
+
+    class AStarStrategy {
+        +name(): str
+        +find_route(graph, origin, destination): RouteResult
+    }
+
+    class RoutePlanner {
+        -_strategy: RouteStrategy
+        +strategy(): RouteStrategy
+        +set_strategy(strategy: RouteStrategy): void
+        +calculate_route(graph, origin, destination): RouteResult
+    }
+
+    RouteStrategy <|-- DijkstraStrategy
+    RouteStrategy <|-- AStarStrategy
+    RoutePlanner o--> RouteStrategy : delega en
+    RouteStrategy ..> RouteResult : genera
+    RouteStrategy ..> CityGraph : consulta
+}
+
+package "Módulo traffic (Patrón Observer)" {
+    enum TrafficEventType {
+        CONGESTION_APPLIED
+        ROAD_CLOSED
+        ROAD_REOPENED
+        CONDITIONS_RESET
+    }
+
+    class TrafficEvent {
+        +event_type: TrafficEventType
+        +u: Optional[str]
+        +v: Optional[str]
+        +value: Optional[float]
+        +description: str
+    }
+
+    abstract class TrafficObserver {
+        +{abstract} on_traffic_changed(event: TrafficEvent): void
+    }
+
+    abstract class TrafficSubject {
+        -_observers: List[TrafficObserver]
+        +attach(observer: TrafficObserver): void
+        +detach(observer: TrafficObserver): void
+        +notify(event: TrafficEvent): void
+    }
+
+    class TrafficManager {
+        +graph: CityGraph
+        +apply_congestion(u, v, factor): bool
+        +close_road(u, v): bool
+        +reopen_road(u, v): bool
+        +reset_all(): void
+        +get_active_congestions(): List[Tuple]
+        +get_closed_roads(): List[Tuple]
+    }
+
+    class RouteStateObserver {
+        +last_event: Optional[TrafficEvent]
+        +is_route_invalidated: bool
+        +history: List[TrafficEvent]
+        +on_traffic_changed(event: TrafficEvent): void
+        +clear_invalidation(): void
+    }
+
+    TrafficSubject <|-- TrafficManager
+    TrafficObserver <|-- RouteStateObserver
+    TrafficSubject o--> "*" TrafficObserver : notifica
+    TrafficManager --> CityGraph : modifica condiciones
+    TrafficObserver ..> TrafficEvent : recibe
+    TrafficEvent --> TrafficEventType
+}
+
+@enduml
